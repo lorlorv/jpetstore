@@ -1,3 +1,5 @@
+<%@ page contentType="text/html; charset=utf-8" pageEncoding="utf-8" %>
+
 <%@ include file="IncludeTop.jsp"%>
 
 <div align="center">
@@ -19,10 +21,11 @@
         <td><fmt:formatDate value="${order.orderDate}"
             pattern="yyyy/MM/dd hh:mm:ss" />
         </td>
-        <td onClick="printOrderDetail(${order.orderId}, this);">	<!-- add click event handler -->
-        	<fmt:formatNumber value="${order.totalPrice}"
-            pattern="$#,##0.00" />
-        </td>
+        <td>  <!-- add click event handler -->
+       		<a href="#" onclick="printOrderDetail(${order.orderId}, this);">
+        		<fmt:formatNumber value="${order.totalPrice}" pattern="$#,##0.00" />
+			</a>
+		</td>       
       </tr>
     </c:forEach>
   </table>
@@ -30,20 +33,22 @@
 
 <script src="<c:url value='/js/jquery-3.4.1.min.js'/>"></script>
 <!-- or <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.4.1/jquery.min.js"></script> -->
+<script src="https://unpkg.com/axios/dist/axios.min.js"></script>
 <script>
-function printOrderDetail(orderId, td) {	// click event handler for <td> including price
-
+function printOrderDetail(orderId, a) {	// click event handler for <td> including price
+	var td = $(a).parent();
 	if ($(td).children("ul").length > 0) {	// if <td> includes <ul> (and order details)
 		$(td).children("ul").remove();		// remove <ul> (and order details)
 	}
 	else {	
 		$(td).append("<ul id='detail'></ul>");	// create <ul> of 'detail' in <td>	
 
-		var reqUrl = "../rest/order/" + orderId;	// REST service URL		
+		var reqUrl = "/rest/order/" + orderId;	// REST service URI		
+		
+		/*
 		$.ajax({									// Ajax call to the REST service
 			type: "GET",
 			url: reqUrl,
-			processData: false,
 			success: function(response){	// callback function: get JS object parsed from JSON response
 				// add <li> of shipping address into <ul>
 				$("#detail").append("<li>Shipping address: " + response.shipAddress1 + ", " + 
@@ -54,17 +59,44 @@ function printOrderDetail(orderId, td) {	// click event handler for <td> includi
 				$(response.lineItems).each( function(i, lineItem){	        	
 			       	content += "LineItem " + lineItem.lineNumber + ": " + lineItem.quantity +
 							" piece(s) of item " + lineItem.itemId + "<br>";
+			    
 				});
 				
 				// add <li> of lineitmes into <ul>
-				$("#detail").append ("<li>" + content + "</li>");
-				
-				$("#detail").removeAttr("id");	// remove id of <ul> for the next click event
+				$("#detail").append("<li>" + content + "</li>");	
+				// remove id of <ul> for the next click event
+				$("#detail").removeAttr("id");	
 			},
-			error: function(){
-				alert("ERROR", arguments);
-			}
-		});  
+			error: function(jqXHR){
+				alert("ERROR: " + JSON.stringify(jqXHR));				
+			}			
+		});
+		*/
+		// Ajax 호출을 위해 Axios library 이용
+		axios.get(reqUrl)
+			.then(response => {
+				var order = response.data;
+				
+				// add <li> of shipping address into <ul>
+				$("#detail").append("<li>Shipping address: " + order.shipAddress1 + ", " + 
+						order.shipAddress2 + ", " + order.shipCity + "</li>");
+				
+				// collect lineitem infos from the response
+				var content = "";
+				$(order.lineItems).each( function(i, lineItem){	        	
+			       	content += "LineItem " + lineItem.lineNumber + ": " + lineItem.quantity +
+							" piece(s) of item " + lineItem.itemId + "<br>";
+			    
+				});
+				
+				// add <li> of lineitmes into <ul>
+				$("#detail").append("<li>" + content + "</li>");	
+				// remove id of <ul> for the next click event
+				$("#detail").removeAttr("id");	
+			})
+			.catch(error => { 
+				alert("ERROR", error); console.error(error);
+			});
 	}
 };
 </script>
